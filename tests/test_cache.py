@@ -53,6 +53,21 @@ def test_a_cached_file_is_returned_and_a_changed_one_is_not(stub: StubServer, ca
     assert cached(directory) is None
 
 
+def test_a_directory_without_a_digest_has_nothing_cached(tmp_path: Path) -> None:
+    holding = tmp_path / "d"
+    holding.mkdir()
+    (holding / "a.zip").write_bytes(b"hello")
+    assert cached(tmp_path / "absent") is None
+    assert cached(holding) is None
+
+
+def test_a_digest_naming_an_absent_file_has_nothing_cached(tmp_path: Path) -> None:
+    directory = tmp_path / "d"
+    directory.mkdir()
+    (directory / "sha256.txt").write_text(f"{hashlib.sha256(b'gone').hexdigest()}  gone.zip\n")
+    assert cached(directory) is None
+
+
 def test_a_body_shorter_than_its_length_leaves_nothing_under_the_final_name(
     stub: StubServer, cache: Path
 ) -> None:
@@ -66,6 +81,25 @@ def test_a_body_shorter_than_its_length_leaves_nothing_under_the_final_name(
     with pytest.raises(ShortDownload) as raised:
         fetch(new_session(), stub.base + "/f", cache / "d", call="GET /f")
     assert (raised.value.expected, raised.value.received) == (5, 3)
+    assert not (cache / "d" / "a.zip").exists() and not (cache / "d" / "sha256.txt").exists()
+
+
+def test_a_stream_that_breaks_leaves_nothing_under_the_final_name(
+    stub: StubServer, cache: Path
+) -> None:
+    stub.route(
+        "GET",
+        "/f",
+        200,
+        b"3\r\nabc\r\nzz\r\n",
+        {
+            "Transfer-Encoding": "chunked",
+            "Content-Disposition": "attachment; filename=a.zip",
+        },
+    )
+    with pytest.raises(ServiceError) as raised:
+        fetch(new_session(), stub.base + "/f", cache / "d", call="GET /f")
+    assert (raised.value.call, raised.value.status) == ("GET /f", None)
     assert not (cache / "d" / "a.zip").exists() and not (cache / "d" / "sha256.txt").exists()
 
 
