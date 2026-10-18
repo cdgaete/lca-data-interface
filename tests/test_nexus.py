@@ -13,6 +13,7 @@ from lca_data_interface.errors import (
     LoginRefused,
     MissingField,
     NotInCatalog,
+    ServiceError,
     TokenRequired,
 )
 from tests.stub import StubServer
@@ -202,6 +203,29 @@ def test_a_session_logs_in_once_and_out_on_leaving(stub: StubServer, cache: Path
     assert all(COOKIE in request.headers.get("Cookie", "") for request in stub.requests[1:])
 
 
+@pytest.mark.usefixtures("credentials")
+def test_a_logout_the_server_refuses_is_a_service_error(stub: StubServer, cache: Path) -> None:
+    register_catalog(stub)
+    stub.route("POST", "/ws/session/logout", 500, b"boom", {}, cookie=COOKIE)
+    with pytest.raises(ServiceError) as raised:
+        with NexusSession.from_environment(base=stub.base):
+            pass
+    assert (raised.value.call, raised.value.status) == ("POST /ws/session/logout", 500)
+    assert "boom" in raised.value.detail
+
+
+@pytest.mark.usefixtures("credentials")
+def test_a_refused_logout_does_not_hide_the_error_leaving_the_block(
+    stub: StubServer, cache: Path
+) -> None:
+    register_catalog(stub)
+    stub.route("POST", "/ws/session/logout", 500, b"boom", {}, cookie=COOKIE)
+    with pytest.raises(NotInCatalog) as raised:
+        with NexusSession.from_environment(base=stub.base) as nexus:
+            nexus.pack("p-9")
+    assert raised.value.uuid == "p-9"
+
+
 def test_the_login_sends_the_token_when_one_is_set(
     stub: StubServer, cache: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -305,6 +329,7 @@ def test_a_pack_the_catalog_lacks_is_not_in_the_catalog(stub: StubServer, cache:
             nexus.pack("p-9")
     assert raised.value.uuid == "p-9"
     assert raised.value.available == ("p-1", "p-2")
+    assert str(raised.value) == "the catalog has no entry for pack p-9; it holds p-1, p-2"
 
 
 @pytest.mark.usefixtures("credentials")
@@ -369,6 +394,7 @@ def test_a_pack_without_a_licence_file_has_none_to_fetch(stub: StubServer, cache
         "licence file",
         (),
     )
+    assert str(raised.value) == "the catalog has no licence file for pack p-2; it holds nothing"
     assert not [request for request in stub.requests if request.path.startswith("/ws/files")]
 
 

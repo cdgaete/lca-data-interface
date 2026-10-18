@@ -21,6 +21,7 @@ from lca_data_interface.transport import ensure_ok, json_of, new_session, send
 
 DEFAULT_BASE: Final = "https://nexus.openlca.org"
 CATALOG_CALL: Final = "GET /ws/user/downloads"
+LOGOUT_CALL: Final = "POST /ws/session/logout"
 CREDENTIAL_VARIABLES: Final = ("NEXUS_USERNAME", "NEXUS_PASSWORD")
 
 
@@ -119,13 +120,10 @@ class NexusSession:
         _exc: BaseException | None,
         _traceback: TracebackType | None,
     ) -> None:
-        """Log out."""
-        send(
-            self._session,
-            "POST",
-            f"{self.base}/ws/session/logout",
-            call="POST /ws/session/logout",
-        )
+        """Log out, checking the answer unless an exception is already leaving the block."""
+        response = send(self._session, "POST", f"{self.base}/ws/session/logout", call=LOGOUT_CALL)
+        if _exc is None:
+            ensure_ok(response, call=LOGOUT_CALL)
 
     def catalog(self) -> list[Database]:
         """Every database the account may download, read from the server once per session."""
@@ -145,7 +143,7 @@ class NexusSession:
         packs = tuple(pack for database in self.catalog() for pack in database.packs)
         matched = [pack for pack in packs if pack.uuid == uuid]
         if not matched:
-            raise NotInCatalog(uuid, "such pack", tuple(pack.uuid for pack in packs))
+            raise NotInCatalog(uuid, "entry", tuple(pack.uuid for pack in packs))
         return matched[0]
 
     def licence(self, pack: Pack) -> Path:

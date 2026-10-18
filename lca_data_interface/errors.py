@@ -39,8 +39,8 @@ class NotInCatalog(LcaDataInterfaceError):
         self.uuid = uuid
         self.wanted = wanted
         self.available = available
-        held = ", ".join(available) if available else "none"
-        super().__init__(f"pack {uuid} has no {wanted}; it carries {held}")
+        held = ", ".join(available) if available else "nothing"
+        super().__init__(f"the catalog has no {wanted} for pack {uuid}; it holds {held}")
 
 
 class LicenceNotAccepted(LcaDataInterfaceError):

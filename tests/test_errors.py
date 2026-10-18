@@ -45,10 +45,12 @@ def test_a_pack_entry_the_catalog_lacks_names_what_was_asked_and_what_the_pack_h
             "u-1", "version 3, format ecoSpold1", ("version 1: ecoSpold1", "version 2: excel")
         )
     )
-    assert (
-        "u-1" in message
-        and "version 3, format ecoSpold1" in message
-        and "version 2: excel" in message
+    assert message == (
+        "the catalog has no version 3, format ecoSpold1 for pack u-1; "
+        "it holds version 1: ecoSpold1, version 2: excel"
+    )
+    assert str(NotInCatalog("u-1", "licence file", ())) == (
+        "the catalog has no licence file for pack u-1; it holds nothing"
     )
 
 
