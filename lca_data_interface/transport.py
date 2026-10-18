@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import requests
 
-from lca_data_interface import __version__
+import lca_data_interface
 from lca_data_interface.errors import ServiceError
 
 
 def new_session() -> requests.Session:
     """A session whose User-Agent names this package and its version."""
     session = requests.Session()
-    session.headers["User-Agent"] = f"lca-data-interface/{__version__}"
+    session.headers["User-Agent"] = f"lca-data-interface/{lca_data_interface.__version__}"
     return session
 
 
