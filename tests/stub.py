@@ -19,11 +19,12 @@ class Recorded:
 
 @dataclass(frozen=True)
 class Answer:
-    """The status, body and headers the stub holds for one route."""
+    """The status, body, headers and required cookie the stub holds for one route."""
 
     status: int
     body: bytes
     headers: dict[str, str]
+    cookie: str | None = None
 
 
 class StubServer:
@@ -45,9 +46,10 @@ class StubServer:
         status: int,
         body: bytes,
         headers: dict[str, str] | None = None,
+        cookie: str | None = None,
     ) -> None:
-        """Answer `method` on `path`, with its query, with `status`, `body` and `headers`."""
-        self._answers[(method, path)] = Answer(status, body, headers or {})
+        """Answer `method` on `path`, with its query, for a request carrying `cookie` when given."""
+        self._answers[(method, path)] = Answer(status, body, headers or {}, cookie)
 
     def close(self) -> None:
         """Stop serving and release the port."""
@@ -56,9 +58,12 @@ class StubServer:
         self._thread.join()
 
     def serve(self, method: str, path: str, headers: dict[str, str], body: bytes) -> Answer:
-        """Record the request and answer it, with 404 for a route nobody registered."""
+        """Record the request and answer it: 404 with no route, 401 without the route's cookie."""
         self.requests.append(Recorded(method, path, headers, body))
-        return self._answers.get((method, path), Answer(404, f"no route for {path}".encode(), {}))
+        answer = self._answers.get((method, path), Answer(404, f"no route for {path}".encode(), {}))
+        if answer.cookie is not None and answer.cookie not in headers.get("Cookie", ""):
+            return Answer(401, b"not logged in", {})
+        return answer
 
 
 def _handler(stub: StubServer) -> type[BaseHTTPRequestHandler]:

@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from lca_data_interface import CommonsServer
-from lca_data_interface.errors import MissingField, NotOnServer
+from lca_data_interface.errors import MissingField, NotOnServer, ServiceError
 from tests.stub import StubServer
 
 GROUP = "Test_Group"
@@ -165,3 +165,17 @@ def test_a_commit_the_server_lacks_is_not_replaced_by_another(
         text,
     )
     assert [request.path for request in stub.requests] == [f"{PREPARE_PATH}?commitId={ABSENT}"]
+
+
+def test_a_history_that_is_not_json_is_a_service_error(stub: StubServer, cache: Path) -> None:
+    stub.route(
+        "GET",
+        HISTORY_PATH,
+        200,
+        b"<html>maintenance</html>",
+        {"Content-Type": "text/html"},
+    )
+    with pytest.raises(ServiceError) as raised:
+        CommonsServer(stub.base).releases(GROUP, NAME)
+    assert (raised.value.call, raised.value.status) == (f"GET {HISTORY_PATH}", 200)
+    assert raised.value.detail == "the answer is not JSON: <html>maintenance</html>"

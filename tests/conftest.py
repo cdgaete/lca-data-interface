@@ -24,3 +24,9 @@ def cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     directory = tmp_path / "cache"
     monkeypatch.setenv("LCA_DATA_INTERFACE_CACHE", str(directory))
     return directory
+
+
+@pytest.fixture
+def credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NEXUS_USERNAME", "someone@example.org")
+    monkeypatch.setenv("NEXUS_PASSWORD", "not-a-password")

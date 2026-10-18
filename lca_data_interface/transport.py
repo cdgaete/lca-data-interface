@@ -31,6 +31,18 @@ def send(
         raise ServiceError(call, None, str(error)) from error
 
 
+def json_of(response: requests.Response, *, call: str) -> object:
+    """The body decoded as JSON; a body that is not JSON is a `ServiceError` naming the call."""
+    try:
+        return response.json()
+    except requests.exceptions.JSONDecodeError as error:
+        raise ServiceError(
+            call,
+            response.status_code,
+            f"the answer is not JSON: {response.text[:200]}",
+        ) from error
+
+
 def ensure_ok(response: requests.Response, *, call: str) -> None:
     """Raise `ServiceError` for a status of 400 or more, naming the call and the answer."""
     if response.status_code >= 400:

@@ -10,8 +10,9 @@ from urllib.parse import urlparse
 import requests
 
 from lca_data_interface.cache import Downloaded, cache_dir, cached, fetch
-from lca_data_interface.errors import MissingField, NotOnServer
-from lca_data_interface.transport import ensure_ok, new_session, send
+from lca_data_interface.errors import NotOnServer
+from lca_data_interface.fields import field
+from lca_data_interface.transport import ensure_ok, json_of, new_session, send
 
 DEFAULT_BASE: Final = "https://www.lcacommons.gov/lca-collaboration"
 
@@ -40,15 +41,15 @@ class CommonsServer:
         )
         _refuse_missing(response, call=call, repository=f"{group}/{name}")
         ensure_ok(response, call=call)
-        history: list[dict[str, object]] = response.json()
+        history = cast(list[dict[str, object]], json_of(response, call=call))
         return [
             Release(
-                version=cast(str, _field(entry, "releaseInfo.version", call=call)),
-                commit=cast(str, _field(entry, "id", call=call)),
-                released_at=_released_at(cast(int, _field(entry, "timestamp", call=call))),
+                version=cast(str, field(entry, "releaseInfo.version", call=call)),
+                commit=cast(str, field(entry, "id", call=call)),
+                released_at=_released_at(cast(int, field(entry, "timestamp", call=call))),
             )
             for entry in history
-            if _field(entry, "isReleased", call=call) is True
+            if field(entry, "isReleased", call=call) is True
         ]
 
     def download(self, group: str, name: str, commit: str) -> Downloaded:
@@ -73,16 +74,6 @@ class CommonsServer:
             directory,
             call="GET /ws/public/download/json",
         )
-
-
-def _field(entry: dict[str, object], path: str, *, call: str) -> object:
-    """The value at a dotted `path` of a JSON record, named by its call and path when absent."""
-    value: object = entry
-    for part in path.split("."):
-        if not isinstance(value, dict) or part not in value:
-            raise MissingField(call, path)
-        value = value[part]
-    return value
 
 
 def _refuse_missing(
