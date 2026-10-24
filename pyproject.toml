@@ -3,6 +3,7 @@ name = "lca-data-interface"
 dynamic = ["version"]
 description = "Download LCA databases from openLCA Nexus and LCA Collaboration Servers into a hash-checked cache."
 requires-python = ">=3.12"
+readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 dependencies = [
