@@ -26,7 +26,7 @@ class LoginRefused(LcaDataInterfaceError):
 
 
 class TokenRequired(LcaDataInterfaceError):
-    """openLCA Nexus asks for a second factor and the token variable is absent."""
+    """openLCA Nexus answered the login asking for a second factor the session did not give."""
 
     def __init__(self) -> None:
         super().__init__("openLCA Nexus asks for a second factor; set NEXUS_TOKEN")
