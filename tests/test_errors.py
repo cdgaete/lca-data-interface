@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from importlib.metadata import version
+
 import lca_data_interface
 from lca_data_interface.errors import (
     CredentialsMissing,
@@ -60,4 +62,4 @@ def test_a_short_download_names_the_file_and_both_lengths():
 
 
 def test_the_version_is_the_package_s():
-    assert lca_data_interface.__version__ == "0.1.0"
+    assert lca_data_interface.__version__ == version("lca-data-interface")

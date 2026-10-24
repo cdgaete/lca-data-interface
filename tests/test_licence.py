@@ -61,3 +61,8 @@ def test_the_wheel_and_the_sdist_carry_both(tmp_path: Path) -> None:
     for names in (wheel_names, sdist_names):
         found = {name.rsplit("/", 1)[-1] for name in names}
         assert {"LICENSE", "NOTICE"} <= found
+
+
+def test_the_project_names_its_author() -> None:
+    project = tomllib.loads((REPOSITORY / "pyproject.toml").read_text())["project"]
+    assert project["authors"] == [{"name": "Carlos Gaete-Morales", "email": "cdgaete@gmail.com"}]
