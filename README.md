@@ -48,4 +48,4 @@ served from there afterwards. The cache is the directory
 
 ## Licence
 
-Apache-2.0. Copyright 2026 Kimel Tech SpA; see `LICENSE` and `NOTICE`.
+Apache-2.0. Copyright 2026 Carlos Gaete-Morales; see `LICENSE` and `NOTICE`.

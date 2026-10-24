@@ -1,5 +1,5 @@
-"""The project states Apache-2.0, carries the licence and Kimel Tech SpA's notice at its root, and
-ships both in the wheel and the sdist."""
+"""The project states Apache-2.0, carries the licence and Carlos Gaete-Morales's notice at its
+root, and ships both in the wheel and the sdist."""
 
 from __future__ import annotations
 
@@ -28,8 +28,8 @@ def test_the_licence_and_the_notice_are_at_the_root() -> None:
 
     notice = (REPOSITORY / "NOTICE").read_text()
     assert notice.startswith("lca-data-interface\n")
-    assert "Copyright 2026 Kimel Tech SpA" in notice
-    assert "This product includes software developed at Kimel Tech SpA, Chile." in notice
+    assert "Copyright 2026 Carlos Gaete-Morales" in notice
+    assert "This product includes software developed by Carlos Gaete-Morales." in notice
 
 
 def test_the_wheel_and_the_sdist_carry_both(tmp_path: Path) -> None:
