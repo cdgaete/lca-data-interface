@@ -21,6 +21,15 @@ def test_the_project_states_its_licence() -> None:
     assert project["license-files"] == ["LICENSE", "NOTICE"]
 
 
+def test_the_project_names_its_repository() -> None:
+    project = tomllib.loads((REPOSITORY / "pyproject.toml").read_text())["project"]
+    assert set(project["urls"]) == {"Homepage", "Repository", "Issues"}
+    assert all(
+        url.startswith("https://github.com/cdgaete/lca-data-interface")
+        for url in project["urls"].values()
+    )
+
+
 def test_the_licence_and_the_notice_are_at_the_root() -> None:
     licence = (REPOSITORY / "LICENSE").read_bytes()
     # the text served at https://www.apache.org/licenses/LICENSE-2.0.txt, which the core carries

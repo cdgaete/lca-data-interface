@@ -11,6 +11,11 @@ dependencies = [
     "platformdirs>=4.11,<5",
 ]
 
+[project.urls]
+Homepage = "https://github.com/cdgaete/lca-data-interface"
+Repository = "https://github.com/cdgaete/lca-data-interface"
+Issues = "https://github.com/cdgaete/lca-data-interface/issues"
+
 [dependency-groups]
 dev = [
     "pytest==9.1.1",
