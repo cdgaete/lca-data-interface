@@ -47,15 +47,15 @@ with NexusSession.from_environment() as session:
 
 ## The cache
 
-`cache_dir()` answers the cache root: the directory `LCA_DATA_INTERFACE_CACHE` names, or the platform's user cache directory for this package, `~/.cache/lca-data-interface` on Linux. One directory under it holds each kind of download, the file under the name the server serves it with:
+`cache_dir()` answers the cache root: the directory `LCA_DATA_INTERFACE_CACHE` names, or the platform's user cache directory for this package, `~/.cache/lca-data-interface` on Linux and `%LOCALAPPDATA%\lca-data-interface\Cache` on Windows. One directory under it holds each kind of download, the file under the name the server serves it with, and a Commons commit by its first 12 characters:
 
 ```text
-commons/<host>/<group>/<name>/<commit>/<file>
+commons/<host>/<group>/<name>/<commit, first 12 characters>/<file>
 nexus/<pack uuid>/licence/<file>
 nexus/<pack uuid>/<version>/<format>/<file>
 ```
 
-A body streams into a `.part` file there and is renamed once its bytes reach the length its answer announces, so a body that stops short is a `ShortDownload` and no file lands under the served name. `sha256.txt` beside it records the digest and the name of the bytes that landed, and a later call answers the cached file only while its bytes still hash to that digest; anything else is downloaded again.
+On Windows every path the cache reads and writes, and the `path` a `Downloaded` answers, is in its extended-length form (`\\?\C:\…`), which the 260-character limit does not bind. A body streams into a `.part` file there and is renamed once its bytes reach the length its answer announces, so a body that stops short is a `ShortDownload` and no file lands under the served name. `sha256.txt` beside it records the digest and the name of the bytes that landed, and a later call answers the cached file only while its bytes still hash to that digest; anything else is downloaded again.
 
 ## Errors
 
@@ -71,6 +71,7 @@ Every error derives from `LcaDataInterfaceError`, and each names in its message 
 | `NotOnServer(repository, commit, detail)` | a Collaboration Server answers 404 for the repository or the commit |
 | `MissingField(call, field)` | an answer lacks a field the client reads, including the served file name of a download |
 | `ShortDownload(name, expected, received)` | a body ended before the length its answer announced |
+| `CacheUnwritable(path, length, detail)` | the system refuses to write a file in the cache; the message names the path, its length and `LCA_DATA_INTERFACE_CACHE` |
 | `ServiceError(call, status, detail)` | a status of 400 or more, an unreachable host, a body that is not JSON, or a served name the cache cannot hold |
 
 ## Tests

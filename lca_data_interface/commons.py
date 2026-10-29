@@ -16,6 +16,8 @@ from lca_data_interface.transport import ensure_ok, json_of, new_session, send
 
 DEFAULT_BASE: Final = "https://www.lcacommons.gov/lca-collaboration"
 
+COMMIT_DIGITS: Final = 12
+
 
 @dataclass(frozen=True)
 class Release:
@@ -54,7 +56,9 @@ class CommonsServer:
 
     def download(self, group: str, name: str, commit: str) -> Downloaded:
         """One released commit's file, from the cache or downloaded into it."""
-        directory = cache_dir() / "commons" / _host(self.base) / group / name / commit
+        directory = (
+            cache_dir() / "commons" / _host(self.base) / group / name / commit[:COMMIT_DIGITS]
+        )
         held = cached(directory)
         if held is not None:
             return held

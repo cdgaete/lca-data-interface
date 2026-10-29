@@ -85,6 +85,19 @@ class ShortDownload(LcaDataInterfaceError):
         super().__init__(f"{name} ended after {received} of {expected} bytes")
 
 
+class CacheUnwritable(LcaDataInterfaceError):
+    """A cache file the system refused to write, with its path and that path's length."""
+
+    def __init__(self, path: str, length: int, detail: str) -> None:
+        self.path = path
+        self.length = length
+        self.detail = detail
+        super().__init__(
+            f"the cache cannot write {path} ({length} characters): {detail}; "
+            "LCA_DATA_INTERFACE_CACHE names a shorter cache root"
+        )
+
+
 class ServiceError(LcaDataInterfaceError):
     """A refused status, an unreachable host, or a malformed answer."""
 

@@ -136,7 +136,7 @@ def test_a_download_prepares_then_fetches_into_the_commit_s_directory(
 ) -> None:
     register_download(stub, NEWEST)
     got = CommonsServer(stub.base).download(GROUP, NAME, NEWEST)
-    assert got.path == cache / "commons" / "127.0.0.1" / GROUP / NAME / NEWEST / SERVED_NAME
+    assert got.path == cache / "commons" / "127.0.0.1" / GROUP / NAME / NEWEST[:12] / SERVED_NAME
     assert (got.size, got.sha256) == (len(ARCHIVE), hashlib.sha256(ARCHIVE).hexdigest())
     assert stub.requests[0].path == f"{PREPARE_PATH}?commitId={NEWEST}"
     assert stub.requests[1].path == f"/ws/public/download/json/repository_{GROUP}@{NAME}@{NEWEST}"

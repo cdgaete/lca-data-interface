@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
@@ -12,6 +13,7 @@ import platformdirs
 import requests
 
 from lca_data_interface.errors import (
+    CacheUnwritable,
     LcaDataInterfaceError,
     MissingField,
     ServiceError,
@@ -36,16 +38,35 @@ class Downloaded:
 def cache_dir() -> Path:
     """The cache root: the directory `LCA_DATA_INTERFACE_CACHE` names, or the user cache."""
     named = os.environ.get("LCA_DATA_INTERFACE_CACHE")
-    return Path(named) if named else Path(platformdirs.user_cache_dir("lca-data-interface"))
+    return (
+        Path(named)
+        if named
+        else Path(platformdirs.user_cache_dir("lca-data-interface", appauthor=False))
+    )
+
+
+def extended(path: str) -> str:
+    """A Windows path in its extended-length form, which the 260-character limit does not bind."""
+    if path.startswith("\\\\?\\"):
+        return path
+    if path.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + path[2:]
+    return "\\\\?\\" + path
+
+
+def on_disk(path: Path, *, platform: str = sys.platform) -> Path:
+    """The path the cache opens: on Windows in its extended-length form, elsewhere as it is."""
+    return Path(extended(str(path.absolute()))) if platform == "win32" else path
 
 
 def cached(directory: Path) -> Downloaded | None:
     """The file `sha256.txt` names, when its bytes hash to the digest written there."""
-    digest_file = directory / DIGEST_NAME
+    folder = on_disk(directory)
+    digest_file = folder / DIGEST_NAME
     if not digest_file.is_file():
         return None
-    digest, _, recorded = digest_file.read_text().partition(DIGEST_SEPARATOR)
-    path = directory / recorded.strip()
+    digest, _, recorded = digest_file.read_text(encoding="utf-8").partition(DIGEST_SEPARATOR)
+    path = folder / recorded.strip()
     if not path.is_file():
         return None
     size = path.stat().st_size
@@ -70,23 +91,30 @@ def fetch(
     name = _served_name(response, call=call)
     announced = response.headers.get("Content-Length")
     response.raw.enforce_content_length = False
-    directory.mkdir(parents=True, exist_ok=True)
-    part = directory / f"{name}.part"
+    folder = on_disk(directory)
+    part = folder / f"{name}.part"
     digest = hashlib.sha256()
     received = 0
-    with part.open("wb") as written:
-        try:
-            for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
-                written.write(chunk)
-                digest.update(chunk)
-                received += len(chunk)
-        except requests.RequestException as error:
-            raise _interrupted(call, name, announced, received, error) from error
-    if announced is not None and received != int(announced):
-        raise ShortDownload(name, int(announced), received)
-    path = directory / name
-    part.rename(path)
-    (directory / DIGEST_NAME).write_text(f"{digest.hexdigest()}{DIGEST_SEPARATOR}{name}\n")
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        with part.open("wb") as written:
+            try:
+                for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
+                    written.write(chunk)
+                    digest.update(chunk)
+                    received += len(chunk)
+            except requests.RequestException as error:
+                raise _interrupted(call, name, announced, received, error) from error
+        if announced is not None and received != int(announced):
+            raise ShortDownload(name, int(announced), received)
+        path = folder / name
+        part.replace(path)
+        (folder / DIGEST_NAME).write_text(
+            f"{digest.hexdigest()}{DIGEST_SEPARATOR}{name}\n", encoding="utf-8"
+        )
+    except OSError as error:
+        unwritable = str(directory / f"{name}.part")
+        raise CacheUnwritable(unwritable, len(unwritable), str(error)) from error
     return Downloaded(path, received, digest.hexdigest())
 
 

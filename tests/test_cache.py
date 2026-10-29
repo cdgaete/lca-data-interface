@@ -148,3 +148,57 @@ def test_every_request_carries_the_package_s_user_agent(stub: StubServer) -> Non
     stub.route("GET", "/f", 200, b"hello")
     send(new_session(), "GET", stub.base + "/f", call="GET /f")
     assert stub.requests[0].headers["User-Agent"] == f"lca-data-interface/{__version__}"
+
+
+def test_the_default_cache_names_the_package_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    import lca_data_interface.cache as module
+
+    asked: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+    def user_cache_dir(*args: object, **kwargs: object) -> str:
+        asked.append((args, kwargs))
+        return "/cache"
+
+    monkeypatch.delenv("LCA_DATA_INTERFACE_CACHE", raising=False)
+    monkeypatch.setattr(module.platformdirs, "user_cache_dir", user_cache_dir)
+    # on Windows platformdirs answers ...\Local\<author>\<app>\Cache unless the author is off
+    assert cache_dir() == Path("/cache")
+    assert asked == [(("lca-data-interface",), {"appauthor": False})]
+
+
+def test_a_windows_path_takes_the_extended_length_prefix() -> None:
+    from lca_data_interface.cache import extended
+
+    assert extended(r"C:\Users\me\cache\f.zip") == "\\\\?\\C:\\Users\\me\\cache\\f.zip"
+    assert extended(r"\\server\share\cache\f.zip") == "\\\\?\\UNC\\server\\share\\cache\\f.zip"
+    assert extended("\\\\?\\C:\\already\\f.zip") == "\\\\?\\C:\\already\\f.zip"
+
+
+def test_a_path_off_windows_is_used_as_it_is(cache: Path) -> None:
+    from lca_data_interface.cache import on_disk
+
+    assert on_disk(cache / "d" / "f.zip", platform="linux") == cache / "d" / "f.zip"
+
+
+def test_a_cache_that_cannot_be_written_names_the_path_and_its_length(
+    stub: StubServer, cache: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from lca_data_interface.errors import CacheUnwritable
+
+    stub.route(
+        "GET",
+        "/f",
+        200,
+        b"hello",
+        {"Content-Length": "5", "Content-Disposition": "attachment; filename=f.zip"},
+    )
+
+    def refuse(self: Path, *args: object, **kwargs: object) -> object:
+        raise OSError(2, "No such file or directory")
+
+    monkeypatch.setattr(Path, "open", refuse)
+    with pytest.raises(CacheUnwritable) as raised:
+        fetch(new_session(), stub.base + "/f", cache / "d", call="GET /f")
+    part = str(cache / "d" / "f.zip.part")
+    assert raised.value.path == part and raised.value.length == len(part)
+    assert "No such file or directory" in str(raised.value)
